@@ -15,6 +15,7 @@ Most route-finding demos stop at "shortest path." AccessPath goes further:
 
 ```
 notes/        Learning notes, numbered from 00, one concept per file
+notebooks/    Exploratory Jupyter notebooks (data exploration, quick visualization tests)
 src/
   data/       Downloading and parsing OpenStreetMap data
   graph/      Turning OSM nodes/ways/tags into a weighted graph

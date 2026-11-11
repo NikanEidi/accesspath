@@ -15,6 +15,10 @@ env/
 # Jupyter
 .ipynb_checkpoints/
 
+# osmnx's own HTTP response cache (regenerable, can get large)
+notebooks/cache/
+cache/
+
 # Data (raw/processed datasets are large and not committed)
 data/*
 !data/.gitkeep
