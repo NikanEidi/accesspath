@@ -19,9 +19,12 @@ env/
 notebooks/cache/
 cache/
 
-# Data (raw/processed datasets are large and not committed)
+# Data (large real-world downloads are not committed; small, hand-built synthetic
+# data and docs are real project artifacts and are)
 data/*
 !data/.gitkeep
+!data/README.md
+!data/clearwell.json
 
 # OS / editor
 .DS_Store
