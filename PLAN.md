@@ -39,14 +39,20 @@ An accessibility-aware route-finding system. Given a start and end point, it fin
 - Python
 - `osmnx` + `networkx` — OSM download/parsing and graph representation
 - `geopy` (or hand-rolled Haversine) — distance calculations
-- `scikit-learn` — regression baseline
-- A GNN framework (PyTorch Geometric or similar) — stretch goal
-- `folium` / `plotly` — map visualization
+- `scikit-learn` — baseline classifier (Random Forest)
+- `torch` — hand-rolled GCN in plain PyTorch (no PyTorch Geometric — lighter install, and the message-passing math is implemented directly rather than calling a library black box)
+- `matplotlib` — graph/route/matrix visualization
+- `pytest` — automated test suite (31 tests, offline, against the synthetic Clearwell city)
 
 ## 5. Datasets
 
-- OpenStreetMap (via `osmnx`) for the road/sidewalk graph, accessibility tags, and the labels for the accessibility-prediction task itself (the ~178 real tagged edges found in Downtown Toronto).
+- OpenStreetMap (via `osmnx`) for the road/sidewalk graph, accessibility tags, and the labels for the accessibility-prediction task itself (the ~178 real tagged edges found in Downtown Toronto — too sparse/imbalanced to reliably validate the GNN-vs-baseline comparison on its own, see `notes/06`/`notes/07`).
+- **Clearwell** — a fully synthetic, hand-designed benchmark city (`src/data/synthetic_city.py`, 8 neighborhoods), built to give the pipeline sufficient, controlled data once real coverage proved insufficient. Clearly labeled as synthetic everywhere it's used; never presented as real-world validation.
 
 ## 6. Learning notes
 
-See `notes/` in the actual repo (`~/Desktop/Nikan/accesspath/notes/`), numbered from `00`, one concept per file, in Nikan's own words — covers Haversine, graphs and shortest-path algorithms, the OSM data model, and regression vs. GNN.
+See `notes/` in the actual repo (`~/Desktop/Nikan/accesspath/notes/`), numbered from `00` to `10` (`07` is prediction-free — a pure research/dataset-search note with no matching notebook), one concept per file, in Nikan's own words — covers Haversine, graphs and shortest-path algorithms, the OSM data model, regression vs. GNN, the synthetic Clearwell city, and two real debugging stories (a train/test split leaking the label, and a checkerboard pattern that was both a trivial feature-proxy and adversarial for GNN message-passing).
+
+## 7. Current state (2026-11-12)
+
+All 5 modules are built and tested end to end. `tests/` has 31 passing `pytest` tests covering weighting, routing, the synthetic city, and 4 deliberately adversarial edge-case neighborhoods (construction closures, dead ends, untagged stairs, a disconnected island) — building those exposed and fixed two real gaps in `accessibility_weight` (no handling for temporary `construction` closures, no fallback for untagged `highway: steps`). The GNN-vs-baseline comparison on Clearwell's Riverside District is done and honestly reported as inconclusive (GNN 0.65 vs. baseline 0.67 accuracy, fixed seed) rather than cherry-picking a favorable unseeded run — see `notes/09`. Ready for public GitHub publishing.

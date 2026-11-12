@@ -6,3 +6,5 @@ folium
 pandas
 numpy
 matplotlib
+torch
+pytest
