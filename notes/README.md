@@ -13,3 +13,4 @@ My own notes as I build AccessPath, numbered in the order I actually learned thi
 - [08 — Building and visualizing Clearwell](08-clearwell-visualization.md)
 - [09 — GNN vs. baseline on Clearwell](09-gnn-baseline-comparison.md) (see notebook `09`; also documents a train/test-split-leaks-the-label bug and its fix)
 - [10 — Four edge-case neighborhoods, and two real weighting gaps found along the way](10-edge-case-neighborhoods.md)
+- [11 — Real Toronto crowding data, and connecting it to the graph](11-sensory-data-exploration.md) (first module of the sensory/cognitive-load extension; see `research/sensory-accessibility-ontario.md` for the design behind it)
