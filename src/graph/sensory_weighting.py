@@ -14,6 +14,12 @@ from src.graph.snapping import nearest_row
 CROWDING_BINS = [-1, 164, 1197.5, float("inf")]
 CROWDING_LABELS = ["low", "medium", "high"]
 
+# Deliberately not as severe as accessibility_weight()'s 1000-point penalty
+# for wheelchair:no/steps/construction -- those are real physical barriers
+# (impossible to pass), while crowding is a strong preference to avoid, not
+# a hard block. Open to tuning once this is actually tested on real routes.
+CROWDING_PENALTIES = {"low": 0, "medium": 20, "high": 200}
+
 
 def crowding_level(count_u, count_v):
     """Bucket an edge's crowding level from its two endpoints' pedestrian counts.
@@ -46,3 +52,16 @@ def edge_crowding(G, u, v, candidate_rows, max_distance_m=200):
         return None
 
     return crowding_level(u_match["total_pedestrian"], v_match["total_pedestrian"])
+
+
+def sensory_weight(attrs, crowding):
+    """Turn an edge's attrs and its crowding level into a real routing weight.
+
+    Mirrors accessibility_weight()'s shape (base length + penalty) so the two
+    functions compose the same way, but never shares a number with it --
+    physical and sensory stay on two separate weight attributes, combined
+    later by a profile, not blended here.
+    """
+    base = attrs.get("length", 1)
+    penalty = CROWDING_PENALTIES.get(crowding, 0)
+    return base + penalty
