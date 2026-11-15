@@ -91,18 +91,87 @@ Ran it on a real edge in the Downtown Toronto graph: `crowding_level` came
 back `"high"` — the first time real Toronto crowding data actually reached
 an AccessPath graph edge.
 
+## Turning crowding into a number: `sensory_weight()`
+
+A category isn't something `nx.shortest_path` can route on — I needed an
+actual number, the same way `accessibility_weight()` already returns one. So
+`sensory_weight(attrs, crowding)` takes an edge's attrs and its crowding
+level and returns `length + penalty`, same shape as `accessibility_weight()`.
+
+The penalty scale was the real decision here: `{"low": 0, "medium": 20,
+"high": 200}`. That `200` is deliberately nowhere close to
+`accessibility_weight()`'s `1000`-point penalty for a real physical barrier
+(`wheelchair:no`, untagged steps, construction). A hard physical barrier is
+impossible to pass — it should dominate any route choice. Crowding is a
+strong preference to avoid, not a wall. I kept this as an explicit test
+(`sensory_weight(..., "high") < 1000`) so the two scales can never
+accidentally collide later.
+
+I never touch `accessibility_weight()`'s number and `sensory_weight()`'s
+number in the same function. They live on two separate edge attributes,
+and the only place they're ever allowed to meet is later, through an
+explicit `profile` parameter — never blended into one opaque score. That
+way the system can always say *why* a route was avoided (stairs vs.
+crowding), not just that it was.
+
+## Routing with it: `apply_sensory_weights()` and `find_low_sensory_route()`
+
+These mirror `apply_accessibility_weights()`/`find_accessible_route()`
+exactly, on purpose — same shape, different data source. The real
+difference: `apply_accessibility_weights()` reads OSM tags that are already
+sitting on the graph's edges, but crowding isn't an OSM tag. Every edge has
+to be snapped to the nearest real Toronto pedestrian record first, which is
+why `apply_sensory_weights()` needs `candidate_rows` as an argument and
+`apply_accessibility_weights()` doesn't.
+
+## Testing it on the real graph — and the slow part I expected
+
+First on a toy graph: a short route through a simulated high-crowding
+intersection, a longer route that stays quiet. `find_low_sensory_route`
+picked the quiet one; plain `nx.shortest_path` (no sensory weight) picked
+the short crowded one — confirms the weighting actually changes the
+decision, not just the number.
+
+Then the real test, on the actual ~14,123-node Downtown Toronto graph:
+comparing plain `nx.shortest_path` against `find_low_sensory_route` on two
+real, reasonably distant nodes.
+
+```
+plain shortest path length: 111 nodes
+low-sensory path length: 74 nodes
+same path? False
+low-sensory route cost: 16505.79
+```
+
+`same_path? False` is the actual result I was after — on real data, not a
+toy graph, sensory weighting picks a genuinely different route. (Fewer
+nodes on the low-sensory path doesn't mean a shorter *distance* — node
+count is intersections crossed, not meters; it could be the same length or
+longer, just along fewer, bigger streets instead of a denser grid. I'd need
+to sum the real edge lengths to know that for sure.)
+
+This took **9m37s on the first try, and 42m34s on the full real run** —
+much slower than I expected. The reason is `apply_sensory_weights` doing an
+unindexed linear nearest-neighbor search (`nearest_row` via
+`geopy.distance()`) for *both* endpoints of *every* edge in the graph,
+against all 6,421 Toronto pedestrian rows, with no spatial index. That's
+roughly `edges × 2 × 6,421` distance calculations. A KD-tree/BallTree would
+fix this, but I'm deliberately leaving it slow for now — the correctness
+result mattered more than the speed, and the fix is well understood, not a
+mystery.
+
 ## What this module does *not* do yet
 
-- Only tested on one edge, not applied across the whole graph.
-- `crowding_level`/`edge_crowding` return a category (`"low"`/`"medium"`/
-  `"high"`), not yet a numeric weight `nx.shortest_path` could use — same gap
-  `accessibility_weight()` didn't have, since it already returns a number.
+- Performance: `apply_sensory_weights` is slow on a real graph (see above) —
+  no spatial index yet, left for a later pass.
 - Bikes (`total_bike` is in the same dataset) aren't used anywhere yet.
-- No `sensory_weight()` function yet, and no routing function that uses it.
 - Construction data (Road Reconstruction, Road Resurfacing, Sidewalk
   Construction, Utility Cut Permits — all real, confirmed usable, see
   `research/sensory-accessibility-ontario.md` section 4) hasn't been touched
   at all yet.
+- No `profile` parameter yet that actually combines `accessibility_weight()`
+  and `sensory_weight()` for someone who needs both — they exist side by
+  side, not yet composed.
 
 ## Takeaway
 
